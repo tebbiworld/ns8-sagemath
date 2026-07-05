@@ -1,0 +1,52 @@
+#
+# Copyright (C) 2026 tebbi
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Main unit for the SageMath module. It runs a single rootless container: a
+# JupyterHub that authenticates against Active Directory / LDAP and spawns one
+# JupyterLab-with-SageMath server per user.
+#
+# Networking: the container publishes only 127.0.0.1:${TCP_PORT} -> 8000. Traefik
+# terminates TLS on the same node and reverse-proxies to that loopback port, so
+# nothing is exposed on any external interface. The hub and the routing proxy's
+# internal API stay bound to container-local addresses (see jupyterhub_config.py).
+#
+# State (jupyterhub.sqlite, cookie secret) and the per-user notebook homes live
+# on two named volumes so they survive container recreation. Podman initialises
+# empty named volumes with the container user's ownership (UID 1001, "sage"), so
+# no chown dance is needed.
+
+[Unit]
+Description=SageMath (JupyterHub) multi-user server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+WorkingDirectory=%S/state
+Restart=always
+TimeoutStartSec=120
+# hub.env (LDAP/AD settings) is written by configure-module; touch it so the
+# --env-file below never fails on a fresh, not-yet-configured instance.
+ExecStartPre=/bin/touch %S/state/hub.env
+ExecStartPre=/bin/rm -f %t/sagemath.pid %t/sagemath.ctr-id
+ExecStart=/usr/bin/podman run \
+    --conmon-pidfile %t/sagemath.pid \
+    --cidfile %t/sagemath.ctr-id \
+    --cgroups=no-conmon \
+    --replace -d --name sagemath \
+    --publish 127.0.0.1:${TCP_PORT}:8000 \
+    --volume sagemath-hub:/srv/jupyterhub \
+    --volume sagemath-userhomes:/srv/userhomes \
+    --env-file %S/state/hub.env \
+    ${SAGEMATH_APP_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/sagemath.ctr-id -t 30
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/sagemath.ctr-id
+PIDFile=%t/sagemath.pid
+Type=forking
+SyslogIdentifier=%u
+
+[Install]
+WantedBy=default.target

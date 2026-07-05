@@ -1,0 +1,79 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Configure sagemath",
+    "$id": "http://nethserver.org/json-schema/task/input/sagemath/configure-module",
+    "description": "Configure the SageMath module",
+    "examples": [
+        {
+            "host": "sage.example.org",
+            "http2https": true,
+            "lets_encrypt": true,
+            "ldap_enabled": true,
+            "ldap_url": "ldaps://ad.example.org:636",
+            "ldap_base_dn": "DC=ad,DC=example,DC=org",
+            "ldap_bind_dn": "ldapservice@ad.example.org",
+            "ldap_bind_password": "secret",
+            "ldap_group": "CN=sage-users,OU=Groups,DC=ad,DC=example,DC=org"
+        }
+    ],
+    "type": "object",
+    "required": ["host"],
+    "properties": {
+        "host": {
+            "type": "string",
+            "description": "Fully qualified domain name for SageMath, like 'sage.example.org'",
+            "format": "hostname",
+            "pattern": "\\."
+        },
+        "lets_encrypt": {
+            "type": "boolean",
+            "title": "Let's Encrypt certificate",
+            "description": "Request a valid Let's Encrypt certificate for the host name."
+        },
+        "http2https": {
+            "type": "boolean",
+            "title": "HTTP to HTTPS redirection",
+            "description": "Redirect all HTTP requests to HTTPS."
+        },
+        "admin_users": {
+            "type": "string",
+            "title": "Hub administrators",
+            "description": "Comma-separated AD login names granted JupyterHub administrator rights. Leave empty for none."
+        },
+        "ldap_enabled": {
+            "type": "boolean",
+            "title": "Enable AD/LDAP login",
+            "description": "Allow login with Active Directory / LDAP accounts. Each user gets a private, persistent SageMath home."
+        },
+        "ldap_url": {
+            "type": "string",
+            "title": "LDAP URL",
+            "description": "LDAPS URL of the directory server, e.g. ldaps://ad.example.org:636"
+        },
+        "ldap_base_dn": {
+            "type": "string",
+            "title": "Base DN",
+            "description": "Search base, e.g. DC=ad,DC=example,DC=org"
+        },
+        "ldap_bind_dn": {
+            "type": "string",
+            "title": "Bind DN",
+            "description": "Service account used to search the directory, e.g. ldapservice@ad.example.org"
+        },
+        "ldap_bind_password": {
+            "type": "string",
+            "title": "Bind password",
+            "description": "Password of the bind/service account."
+        },
+        "ldap_group": {
+            "type": "string",
+            "title": "Access group DN",
+            "description": "Distinguished name of the group whose members may log in. Empty means any directory user."
+        },
+        "ldap_user_attribute": {
+            "type": "string",
+            "title": "Login attribute",
+            "description": "Attribute matched against the entered user name. Defaults to sAMAccountName (Active Directory)."
+        }
+    }
+}

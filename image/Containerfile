@@ -1,0 +1,56 @@
+# Copyright (C) 2026 tebbi
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Runtime image for the NS8 SageMath module.
+#
+# It extends the official sagemath/sagemath image (SageMath + Jupyter + the
+# SageMath kernel) into a small multi-user server by adding JupyterHub, the
+# LDAP/Active-Directory authenticator and the configurable-http-proxy. Users log
+# in with their AD account and each gets their own JupyterLab with the SageMath
+# kernel and a private, persistent notebook home.
+#
+# Design note on the entrypoint: the base image ships /usr/local/bin/sage-entry
+# point which runs its arguments as `sage -sh -c "$*"`, i.e. inside the fully
+# initialised Sage shell environment. The SageMath Jupyter kernel launches as a
+# bare `python -m sage.repl.ipython_kernel` and therefore ONLY works when that
+# environment is active. We deliberately keep the base entrypoint: the hub is
+# started as `jupyterhub ...`, the entrypoint wraps it in `sage -sh`, and the
+# single-user servers the hub spawns inherit that environment, so the SageMath
+# kernel resolves. Do not override ENTRYPOINT.
+
+FROM docker.io/sagemath/sagemath:latest
+
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+
+# configurable-http-proxy is JupyterHub's routing proxy and needs Node.js.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && npm install -g configurable-http-proxy@^4 \
+    && npm cache clean --force \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# JupyterHub + the LDAP/AD authenticator, installed INTO the Sage Python venv
+# (via `sage -pip`) so the hub, jupyterhub-singleuser and the SageMath kernel
+# all live in the same interpreter and find each other. JupyterLab itself is
+# already provided by the base image.
+RUN sage -pip install --no-cache-dir \
+        "jupyterhub>=5,<6" \
+        "jupyterhub-ldapauthenticator>=2,<3"
+
+# Baked hub configuration; reads every tunable from the environment so the NS8
+# actions only have to write an env file. Lives outside the state volume.
+COPY jupyterhub_config.py /etc/jupyterhub/jupyterhub_config.py
+
+# Hub state (jupyterhub.sqlite, cookie secret) and the per-user notebook homes
+# live on mounted volumes owned by the runtime user.
+RUN mkdir -p /srv/jupyterhub /srv/userhomes \
+    && chown -R sage:sage /srv/jupyterhub /srv/userhomes /etc/jupyterhub
+
+USER sage
+WORKDIR /srv/jupyterhub
+EXPOSE 8000
+
+# CMD is passed to the inherited sage-entrypoint, which runs it inside `sage -sh`.
+CMD ["jupyterhub", "-f", "/etc/jupyterhub/jupyterhub_config.py"]

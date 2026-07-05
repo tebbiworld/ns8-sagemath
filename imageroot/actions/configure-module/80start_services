@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 tebbi
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Enable and (re)start the SageMath JupyterHub container so configuration
+# changes (host name, LDAP settings) are applied.
+
+import subprocess
+
+subprocess.run(["systemctl", "--user", "enable", "sagemath.service"], check=True)
+subprocess.run(["systemctl", "--user", "restart", "sagemath.service"], check=True)

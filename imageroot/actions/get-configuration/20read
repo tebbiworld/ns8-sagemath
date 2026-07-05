@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 tebbi
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+import os
+import sys
+import json
+
+import agent
+
+config = {}
+
+config["host"] = os.getenv("TRAEFIK_HOST", "")
+config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
+
+route = agent.get_route(os.environ["MODULE_ID"])
+config["lets_encrypt"] = route.get("lets_encrypt", False)
+
+config["public_url"] = os.getenv("SAGEMATH_ROOT_URL", "")
+config["admin_users"] = os.getenv("HUB_ADMIN_USERS", "")
+
+# LDAP / Active Directory login settings (for the Settings page to edit).
+config["ldap_enabled"] = os.getenv("LDAP_ENABLED") == "True"
+config["ldap_url"] = os.getenv("LDAP_URL", "")
+config["ldap_base_dn"] = os.getenv("LDAP_BASE_DN", "")
+config["ldap_bind_dn"] = os.getenv("LDAP_BIND_DN", "")
+config["ldap_bind_password"] = os.getenv("LDAP_BIND_PASSWORD", "")
+config["ldap_group"] = os.getenv("LDAP_GROUP", "")
+config["ldap_user_attribute"] = os.getenv("LDAP_USER_ATTRIBUTE", "sAMAccountName")
+
+json.dump(config, fp=sys.stdout)

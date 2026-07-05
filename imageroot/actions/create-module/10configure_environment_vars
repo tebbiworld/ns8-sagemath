@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 tebbi
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# Seed the environment for a fresh SageMath instance: reserve the TCP port that
+# Traefik will reverse-proxy to. The rest (host name, LDAP settings) is applied
+# later by configure-module.
+
+import os
+
+import agent
+
+# The node allocates org.nethserver.tcp-ports-demand ports as a comma-separated
+# TCP_PORTS list. We reserve a single port, published on 127.0.0.1 and fronted
+# by Traefik.
+tcp_ports = [p.strip() for p in os.environ.get("TCP_PORTS", "").split(",") if p.strip()]
+tcp_port = tcp_ports[0] if tcp_ports else "8000"
+agent.set_env("TCP_PORT", tcp_port)
+
+agent.dump_env()
