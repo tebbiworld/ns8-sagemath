@@ -76,3 +76,12 @@ manual publish commands.
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+## Directory server on the same node
+
+If the LDAP/AD server is the node itself (for example the NS8 Samba account
+provider on this node), the container cannot connect to the node's own IP
+address — rootless containers see that address as their own. The module detects
+this at configuration time and lets the hub connect through
+`host.containers.internal` instead; nothing needs to be configured for it. The
+detection runs again on every module update.

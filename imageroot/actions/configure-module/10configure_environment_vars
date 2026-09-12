@@ -15,6 +15,7 @@
 #     is where the LDAP/AD and hub settings actually reach jupyterhub_config.py.
 
 import os
+import subprocess
 import sys
 import json
 import urllib.parse
@@ -66,6 +67,16 @@ if ldap_url:
 agent.set_env("LDAP_HOST", ldap_host)
 agent.set_env("LDAP_PORT", ldap_port)
 
+# The container cannot reach its own node's IP address (rootless network); when
+# the directory server runs on this very node the hub must talk to
+# host.containers.internal instead. See bin/ldap-container-host.
+container_ldap_host = ldap_host
+if ldap_host:
+    container_ldap_host = subprocess.run(
+        [os.path.expanduser("~/.config/bin/ldap-container-host"), ldap_host],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() or ldap_host
+
 agent.dump_env()
 
 # --- Container env file (--env-file) -----------------------------------------
@@ -75,7 +86,7 @@ lines = [
     "HUB_BASE_URL=/",
     f"HUB_ADMIN_USERS={admin_users}",
     f"LDAP_ENABLED={'true' if (ldap_enabled and ldap_host and ldap_base_dn) else 'false'}",
-    f"LDAP_HOST={ldap_host}",
+    f"LDAP_HOST={container_ldap_host}",
     f"LDAP_PORT={ldap_port}",
     f"LDAP_BASE_DN={ldap_base_dn}",
     f"LDAP_BIND_DN={ldap_bind_dn}",

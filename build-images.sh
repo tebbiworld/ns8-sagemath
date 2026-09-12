@@ -26,9 +26,13 @@ appimage="${repobase}/${appname}:${apptag}"
 #    JupyterHub, the LDAP/AD authenticator and configurable-http-proxy. This is
 #    what actually runs on the node (per-user JupyterLab + SageMath kernel).
 #
-echo "Build the SageMath + JupyterHub runtime image..."
-podman build --force-rm -t "${appimage}" -f image/Containerfile image/
-images+=("${appimage}")
+# Set SKIP_APP_IMAGE=1 for module-only releases (imageroot/UI changes): the
+# already published runtime image keeps its pinned tag and is not rebuilt.
+if [[ -z "${SKIP_APP_IMAGE}" ]]; then
+    echo "Build the SageMath + JupyterHub runtime image..."
+    podman build --force-rm -t "${appimage}" -f image/Containerfile image/
+    images+=("${appimage}")
+fi
 
 # The runtime image pinned in the module label. The node exposes its reference
 # as ${SAGEMATH_APP_IMAGE} (basename uppercased, non-alphanumeric -> underscore).
