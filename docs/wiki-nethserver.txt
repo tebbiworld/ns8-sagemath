@@ -1,0 +1,91 @@
+======SageMath======
+[[https://www.sagemath.org/|SageMath]] is a free open-source mathematics software system (algebra, calculus, number theory, symbolic computation, plotting). This module runs SageMath in the browser as a multi-user JupyterHub: users log in with their Active Directory / LDAP account and each gets a private, persistent JupyterLab with the SageMath kernel.
+
+====Announcement and talks====
+The SageMath app [[https://community.nethserver.org/t/sagemath-for-ns8-multi-user-sagemath-in-the-browser-via-jupyterhub-community-module-hobby-project/28013|announcement]]
+
+SageMath is a community application from the [[ns8:tebbiworld_repository|tebbiworld]] repository. Documentation and source can be found on [[https://github.com/tebbiworld/ns8-sagemath|Github]]
+
+=====What the module adds to the official image=====
+The official ''sagemath/sagemath'' image is a //single-user// Jupyter notebook without login and without separation between users. The module extends it, in one rootless container, with:
+
+  * **JupyterHub** (with ''configurable-http-proxy'') as the entry point,
+  * the **LDAP / Active Directory authenticator** (''jupyterhub-ldapauthenticator''), so users log in with their existing AD account, optionally restricted to one AD group,
+  * the **SimpleLocalProcessSpawner**, which starts one JupyterLab per user with a separate, persistent home directory.
+
+The hub is started through the ''sage -sh'' entrypoint of the base image. The single-user servers inherit the Sage environment, so the SageMath kernel is available without further setup.
+
+=====Intended use and limits=====
+**Suitable for:** a trusted group, for example a team, a study group or a family, that shares one AD group.
+
+**Not suitable for:** untrusted users or public multi-tenant operation. All user servers run as the same container user; each user only has a separate home directory. The JupyterHub documentation describes the ''SimpleLocalProcessSpawner'' as intended for testing and as providing no isolation between users. Every logged-in user can therefore, in principle, read and modify the files of other users.
+
+=====Architecture=====
+
+  * One rootless container, image ''ghcr.io/tebbiworld/sagemath-app'' (''FROM sagemath/sagemath'' plus JupyterHub, LDAP authenticator and Node.js/CHP).
+  * The container publishes the node loopback only: %%127.0.0.1:<allocated port>%% is forwarded to container port 8000. Traefik publishes it on the configured host name and forwards the WebSocket connections the notebook kernels require.
+  * Two named volumes:
+
+^ Volume ^ Content ^
+| ''sagemath-hub'' | JupyterHub database and cookie secret |
+| ''sagemath-userhomes'' | One home directory per user (notebooks, files) |
+
+=====Installation=====
+On a NethServer 8 node:
+
+<code bash>
+add-module ghcr.io/tebbiworld/sagemath:latest 1
+</code>
+
+Then open the module UI and configure the settings below. Without AD/LDAP configuration the hub runs, but nobody can log in.
+
+=====Settings=====
+
+^ Setting ^ Description ^
+| Host name | %%FQDN%%, for example ''sage.example.org''. Must resolve to the node on which the module runs. |
+| Let's Encrypt certificate | Requests a certificate for the host name. Requires that ports 80 and 443 of this %%FQDN%% reach this node. |
+| HTTP to HTTPS redirection | Redirects HTTP to HTTPS. |
+| Hub administrators | Comma-separated AD login names with JupyterHub administrator rights. Empty means none. |
+| Enable AD/LDAP login | Activates the login with directory accounts. |
+| LDAP address | LDAPS address of the directory server, for example %%ldaps://ad.example.org:636%%. LDAPS is required: AD refuses simple binds on plain port 389. |
+| Base DN | Search base, for example ''DC=ad,DC=example,DC=org''. |
+| Bind DN and bind password | Read-only service account used to look up users and groups, for example ''ldapservice@ad.example.org''. |
+| Access group DN | Full DN of the group whose members may log in. //Load groups// reads the groups from the directory for selection. **Set an access group.** |
+| Login attribute | Attribute matched against the entered user name. Default ''sAMAccountName'' (Active Directory). |
+
+=====Usage=====
+
+  - Open the published address of the module.
+  - Log in with the AD login name (for example ''jdoe'', not the full UPN, when the login attribute is ''sAMAccountName'') and the AD password.
+  - JupyterLab opens. Create a new notebook with the **SageMath** kernel.
+  - Notebooks are stored in the personal home directory and remain after logout and container restarts.
+
+Hub administrators manage running user servers on the JupyterHub admin page under the path %%/hub/admin%%.
+
+=====Security notes=====
+
+  * User passwords are checked against AD at login and are not stored by the module.
+  * The **bind account password** is stored in the module configuration (''state/environment'') and in the container environment file ''state/hub.env''. Use a dedicated read-only account.
+  * The **LDAPS server certificate is not validated**, neither at login nor when loading groups. The connection is encrypted, but the identity of the directory server is not verified. Run the module only in a network where the path to the directory server is trusted.
+  * See //Intended use and limits// regarding the separation between users.
+
+=====Backup=====
+The module does not list its volumes for the NS8 backup; there is no ''state-include.conf''. An NS8 backup of this module contains the module environment only, **not** the user notebooks in ''sagemath-userhomes''. Back up the volume separately until this is added to the module.
+
+=====Links=====
+
+  * [[https://doc.sagemath.org/|SageMath documentation]]
+  * [[https://jupyterhub.readthedocs.io/|JupyterHub documentation]]
+  * [[https://github.com/jupyterhub/ldapauthenticator|jupyterhub-ldapauthenticator]]
+  * [[https://github.com/tebbiworld/ns8-sagemath/issues|Bug reports]]
+
+=====Disclaimer=====
+Private hobby project, shared as-is. No warranty, no guaranteed support, use at your own risk. Unofficial community package, not affiliated with or endorsed by the SageMath project; "SageMath" is used only to identify the packaged software. The runtime image builds on the upstream ''sagemath/sagemath'' image; the module's own code is licensed %%GPL%%-3.0-or-later.
+
+----
+{{tag>application}}
+{{tag>category:Education}}
+{{tag>status:Alpha}}
+{{tag>certlevel:1}}
+{{tag>repo:tebbiworld}}
+{{tag>description:"Multi-user SageMath in the browser via JupyterHub with AD login"}}
