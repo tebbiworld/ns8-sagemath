@@ -18,7 +18,7 @@ reponame="sagemath"
 # module via the org.nethserver.images label, so the node pre-pulls it and
 # exposes it as ${SAGEMATH_APP_IMAGE}.
 appname="sagemath-app"
-apptag="${APPTAG:-1.0.0}"
+apptag="${APPTAG:-1.0.0}"  # CI auto-release passes APPTAG=<module version>
 appimage="${repobase}/${appname}:${apptag}"
 
 #

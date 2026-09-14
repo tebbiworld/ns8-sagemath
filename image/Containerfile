@@ -18,7 +18,7 @@
 # single-user servers the hub spawns inherit that environment, so the SageMath
 # kernel resolves. Do not override ENTRYPOINT.
 
-FROM docker.io/sagemath/sagemath:latest
+FROM docker.io/sagemath/sagemath:10.9
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
