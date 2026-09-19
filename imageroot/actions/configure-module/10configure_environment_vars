@@ -21,6 +21,7 @@ import json
 import urllib.parse
 
 import agent
+import modsecrets
 
 data = json.load(sys.stdin)
 
@@ -30,6 +31,8 @@ lets_encrypt = data.get("lets_encrypt", False)
 
 agent.set_env("TRAEFIK_HOST", host)
 agent.set_env("TRAEFIK_HTTP2HTTPS", h2hs)
+# kept so restore-module can re-create the route with the same setting
+agent.set_env("TRAEFIK_LETS_ENCRYPT", lets_encrypt)
 
 scheme = "https" if (lets_encrypt or h2hs) else "http"
 agent.set_env("SAGEMATH_ROOT_URL", f"{scheme}://{host}")
@@ -45,7 +48,9 @@ ldap_enabled = bool(data.get("ldap_enabled", False))
 ldap_url = (data.get("ldap_url") or "").strip().rstrip("/")
 ldap_base_dn = (data.get("ldap_base_dn") or "").strip()
 ldap_bind_dn = (data.get("ldap_bind_dn") or "").strip()
-ldap_bind_password = data.get("ldap_bind_password") or ""
+# The bind password is a secret: state/passwords.env, not the module
+# environment. A blank field keeps the stored value.
+ldap_bind_password = data.get("ldap_bind_password") or modsecrets.get("LDAP_BIND_PASSWORD")
 ldap_group = (data.get("ldap_group") or "").strip()
 ldap_user_attribute = (data.get("ldap_user_attribute") or "sAMAccountName").strip()
 
@@ -54,7 +59,7 @@ agent.set_env("LDAP_ENABLED", ldap_enabled)
 agent.set_env("LDAP_URL", ldap_url)
 agent.set_env("LDAP_BASE_DN", ldap_base_dn)
 agent.set_env("LDAP_BIND_DN", ldap_bind_dn)
-agent.set_env("LDAP_BIND_PASSWORD", ldap_bind_password)
+modsecrets.write({"LDAP_BIND_PASSWORD": ldap_bind_password})
 agent.set_env("LDAP_GROUP", ldap_group)
 agent.set_env("LDAP_USER_ATTRIBUTE", ldap_user_attribute)
 
@@ -77,7 +82,6 @@ if ldap_host:
         capture_output=True, text=True, check=True,
     ).stdout.strip() or ldap_host
 
-agent.dump_env()
 
 # --- Container env file (--env-file) -----------------------------------------
 # Only the values jupyterhub_config.py consumes. Written atomically.
@@ -94,6 +98,8 @@ lines = [
     f"LDAP_GROUP={ldap_group}",
     f"LDAP_USER_ATTRIBUTE={ldap_user_attribute}",
 ]
+# hub.env carries the bind password: keep it private
+os.umask(0o077)
 with open("hub.env.tmp", "w") as fp:
     fp.write("\n".join(lines) + "\n")
 os.replace("hub.env.tmp", "hub.env")

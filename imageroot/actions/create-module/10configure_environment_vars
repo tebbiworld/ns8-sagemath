@@ -20,4 +20,3 @@ tcp_ports = [p.strip() for p in os.environ.get("TCP_PORTS", "").split(",") if p.
 tcp_port = tcp_ports[0] if tcp_ports else "8000"
 agent.set_env("TCP_PORT", tcp_port)
 
-agent.dump_env()
