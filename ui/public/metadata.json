@@ -4,14 +4,20 @@
     "en": "SageMath in the browser: multi-user JupyterLab with the SageMath kernel and Active Directory login",
     "de": "SageMath im Browser: Mehrbenutzer-JupyterLab mit SageMath-Kernel und Active-Directory-Anmeldung"
   },
-  "categories": ["development"],
+  "categories": [
+    "development"
+  ],
   "authors": [
-    { "name": "tebbi", "email": "info@ebbinghaus.world" }
+    {
+      "name": "tebbi",
+      "email": "info@ebbinghaus.world"
+    }
   ],
   "docs": {
     "documentation_url": "https://doc.sagemath.org/",
     "bug_url": "https://github.com/tebbiworld/ns8-sagemath/issues",
-    "code_url": "https://github.com/tebbiworld/ns8-sagemath"
+    "code_url": "https://github.com/tebbiworld/ns8-sagemath",
+    "relnotes_url": "https://github.com/tebbiworld/ns8-sagemath/releases"
   },
   "source": "ghcr.io/tebbiworld/sagemath"
 }
