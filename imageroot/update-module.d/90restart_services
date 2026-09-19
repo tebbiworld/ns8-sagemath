@@ -38,4 +38,4 @@ if ldap_host and os.path.isfile("hub.env"):
         print(f"hub.env: LDAP_HOST -> {chost}")
 
 subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-subprocess.run(["systemctl", "--user", "restart", "sagemath.service"], check=True)
+subprocess.run(["systemctl", "--user", "try-restart", "sagemath.service"], check=True)
